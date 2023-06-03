@@ -1,0 +1,43 @@
+Kerberos and Firewalls
+Ports used
+Kerberos is primarily a UDP protocol, although it falls back to TCP for large Kerberos tickets. This may require special configuration on firewalls to allow the UDP response from the Kerberos server (KDC). Kerberos clients need to send UDP and TCP packets on port 88 and receive replies from the Kerberos servers.
+
+The UDP packets may not require a special rule if your firewall supports UDP connection tracking, since the packet from the Kerberos server will come shortly after a request from the client.
+
+Systems that permit Kerberos logins via rlogin must accept incoming TCP connections on port 2105. This can be restricted to hosts from which users will be coming. It's common to restrict this port to only Stanford IP addresses.
+
+Systems that permit Kerberos rsh (and therefore rcp) commands must accept incoming TCP connections on port 544. This can be restricted to hosts from which users will be coming. It's common to restrict this port to only Stanford IP addresses.
+
+There is one very annoying problem with Kerberos rsh, and therefore also rcp. When connecting to a system with Kerberos rsh, the remote system needs to open a connection back to the client system. That connection back could be on any of a wide range of ports. Therefore, in order to allow Kerberos rsh out from a system, the system on which rsh or rcp is being run must allow TCP connections to TCP ports between 32000 and 65535, from any system to which rsh or rcp is supported, and with a source port between 1 and 1023. Similarly, a system running an rsh server must be able to open an outbound TCP connection to a destination port of 32000 to 65535 on the client system (although normally outbound TCP connections aren't restricted by firewalls and hence this often doesn't require a special rule).
+
+To summarize, a firewall must allow, for all Kerberos clients:
+
+Destination port 88 UDP outbound to Kerberos KDCs
+Destination port 88 TCP outbound to Kerberos KDCs
+Source port 88 UDP inbound from Kerberos KDCs
+Servers providing additional Kerberized services will need:
+
+Destination port 544 TCP inbound (rsh/rcp)
+Destination port 2105 TCP inbound (rlogin)
+Source port 1-1023, destination port 32000-65525 TCP outbound (rsh/rcp)
+And systems behind a firewall that will be rsh or rcp clients will need:
+
+Source port 1-1023, destination port 32000-65525 TCP inbound (rsh/rcp)
+The main Stanford Kerberos KDCs are:
+
+    krb5auth1.stanford.edu
+    krb5auth2.stanford.edu
+    krb5auth3.stanford.edu
+Please note that while we try not to change the IP addresses of these servers, we may need to as part of network restructuring. If at all possible, you should not assume the IP addresses will remain static and should be aware that they could change.
+
+There are other Kerberos servers on campus that may be used for some purposes, such as the servers for the CS.STANFORD.EDU and SLAC.STANFORD.EDU Kerberos realms and the servers for the Active Directory Windows environment. You may want to simplify your firewall rules and just allow Kerberos source port 88 UDP packets from all Stanford IP addresses (if your firewall doesn't support UDP connection tracking and you need to add UDP rules).
+
+NAT and address issues
+Kerberos optionally supports binding a Kerberos ticket to a particular IP address. This is intended to make it more difficult for attackers to steal Kerberos tickets and use them on a different system. This security measure breaks in the presence of any address translation, however, and the amount of security gained is very limited.
+
+Stanford's standard Kerberos configuration disables this feature of Kerberos and tells the client to always obtain address-less tickets. Many Kerberos implementations either always obtain address-less tickets or do so by default. To be sure, on systems that will be behind address translation, you should add:
+
+    noaddresses = true
+to the [libdefaults] section of your /etc/krb5.conf.
+
+On a UNIX system, you can check whether your Kerberos tickets have addresses associated with them by running klist -a.
